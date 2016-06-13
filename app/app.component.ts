@@ -1,5 +1,5 @@
 import {Component} from '@angular/core';
-import {NanaDal} from './nanaDataService/DAL/nana.dal';
+import {NanaDal} from './DAL/dal.service';
 import { Http, Response, Headers, HTTP_PROVIDERS } from '@angular/http';
 
 
