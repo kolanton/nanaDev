@@ -2,14 +2,14 @@ import {TestService, MockTestService} from '../test.service';
 import {MockWrapperService} from '../mock.service';
 import {MockNanaDal, NanaDal} from '../DAL/nana.dal';
 import {NanaserviceService, Navigation} from '../nanaserviceService/nanaservice.service';
-import {it,
+import {it, xit,
     describe,
     expect,
     beforeEach,
     beforeEachProviders,
     inject} from '@angular/core/testing';
 import {provide, ReflectiveInjector} from '@angular/core';
-import {HTTP_PROVIDERS, BaseRequestOptions, RequestMethod, XHRBackend, Response, ResponseOptions, Request, Http} from '@angular/http';
+import {BaseRequestOptions, Response, ResponseOptions, Http} from '@angular/http';
 import {MockBackend, MockConnection} from '@angular/http/testing';
 
 describe('test.service step by step test', () => {
@@ -101,8 +101,6 @@ describe('Nana Service', () => {
 });
 
 describe('MockBackend: TestService', () => {
-
-
     it('should return response when subscribed to getItems', () => {
         let injector = ReflectiveInjector.resolveAndCreate([
             MockBackend, BaseRequestOptions,
@@ -119,62 +117,64 @@ describe('MockBackend: TestService', () => {
             }),
         ]);
         let backEnd: MockBackend = injector.get(MockBackend);
-        //let req = new Request({ method: RequestMethod.Get, body: '' });
-        //backEnd.createConnection(req);
-
         backEnd.connections.subscribe((data: MockConnection) => {
             expect(data.request.url).toContain('service/126');
             data.mockRespond(new Response(new ResponseOptions({ body: { NavigateID: 1, NavigateName: 'name1' } })));
         });
 
-        let testService: NanaDal = injector.get(NanaDal);
+        let sut: NanaDal = injector.get(NanaDal);
 
-        expect(testService instanceof (NanaDal)).toBe(true);
-        expect(NanaDal.getInstance()).toEqual(testService);
-        testService.setFactory('service', 126);
+        expect(sut instanceof (NanaDal)).toBe(true);
+        expect(NanaDal.getInstance()).toEqual(sut);
+        sut.setFactory('service', 126);
 
-        testService.getItems().subscribe((res: Navigation) => {
+        sut.getItems().subscribe((res: Navigation) => {
             expect(res).toEqual({ NavigateID: 1, NavigateName: 'name1' });
         });
     });
 });
 
-xdescribe('', () => {
-
+describe('MockBackend: TestService using beforeEach and beforeEachProviders', () => {
+    let injector;
     beforeEachProviders(() => [
-        BaseRequestOptions,
-        MockBackend,
-        provide(Http, {
-            useFactory: (backend: MockBackend, defaultOptions: BaseRequestOptions) => {
-                return new Http(backend, defaultOptions);
-            },
-            deps: [MockBackend, BaseRequestOptions]
-        }),
-        provide(NanaDal, {
-            useFactory: (http: Http) => {
-                return new NanaDal(http);
-            },
-            deps: [Http]
-        })
+        injector = ReflectiveInjector.resolveAndCreate(
+            [
+                BaseRequestOptions,
+                MockBackend,
+                provide(Http, {
+                    useFactory: (backend: MockBackend, defaultOptions: BaseRequestOptions) => {
+                        return new Http(backend, defaultOptions);
+                    },
+                    deps: [MockBackend, BaseRequestOptions]
+                }),
+                provide(NanaDal, {
+                    useFactory: (http: Http) => {
+                        return new NanaDal(http);
+                    },
+                    deps: [Http]
+                })
+            ])
     ]);
 
-    beforeEach(inject([MockBackend], (backend: MockBackend) => {
-        const baseResponse = new Response(new ResponseOptions({ body: 'got response' }));
+    beforeEach(() => {
+        let backend = injector.get(MockBackend);
+        const baseResponse = new Response(new ResponseOptions({ body: { res: 'got response' } }));
         backend.connections.subscribe((c: MockConnection) => c.mockRespond(baseResponse));
+    });
 
-        backend.createConnection(new Request({
-            method: RequestMethod.Get,
-            url: 'http://localhost/Nana10MVC/service/126',
-            search: 'password=123'
-        }));
-    }));
+    it('should return response on any Request', () => {
+        let sut = injector.get(Http);
+        sut.get('someFakeUrl').subscribe((res: Response) => {
+            expect(res).toEqual(new Response(new ResponseOptions({ body: { res: 'got response' } })));
+        });
+    });
 
-    it('should return response when subscribed to getUsers',
-        inject([NanaDal], (testService: NanaDal) => {
-            testService.getItems().subscribe((res: Response) => {
-                expect(res).toBe('got response');
-            });
-        })
+    it('should return response when subscribed to getUsers', () => {
+        let sut = injector.get(NanaDal);
+        sut.getItems().subscribe((res: Response) => {
+            expect(res).toEqual({ res: 'got response' });
+        });
+    }
     );
 
 
